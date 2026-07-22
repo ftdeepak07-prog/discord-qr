@@ -1,0 +1,18 @@
+# Chrome profiles (created by the script)
+chrome_profile*/
+chrome_profile
+
+# Temp images
+temp/
+
+# Generated output
+discord_gift.png
+
+# Archives
+*.rar
+*.zip
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
