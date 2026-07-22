@@ -82,18 +82,15 @@ def generate_overlay():
         fill=(88, 101, 242, 255)
     )
 
-    # Draw a simple Discord-style icon (rounded chat bubble with smile)
+    # Draw a simple Discord-style headphone icon
     cx, cy = circle_center, circle_center
-    # Headphones arc
-    arc_pad = 30
     band_top = cy - 55
     band_bottom = cy - 20
-    ear_pad = 25
 
-    # Headphone band (arc)
+    # Headphone band (top arc: left → top → right)
     draw.arc(
         [cx - 80, band_top, cx + 80, band_bottom + 40],
-        start=0, end=360, fill=(255, 255, 255, 255), width=14
+        start=180, end=360, fill=(255, 255, 255, 255), width=14
     )
     # Left ear cup
     draw.rounded_rectangle(
