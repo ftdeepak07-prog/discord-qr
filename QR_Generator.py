@@ -185,6 +185,8 @@ def generate_template():
         font_medium = font_large
         font_small = font_large
 
+    # "NITRO" title text
+    nitro_y = gift_box_y + box_size + 30
     nitro_text = 'DISCORD NITRO'
     bbox = draw.textbbox((0, 0), nitro_text, font=font_large)
     text_w = bbox[2] - bbox[0]
