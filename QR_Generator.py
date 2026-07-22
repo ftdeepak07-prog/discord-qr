@@ -15,6 +15,7 @@ import time
 
 # Developer: NightfallGT
 # Educational purposes only
+# Hosted on Railway — auto-generated overlay & template assets
 
 # Detect if running in a Docker/headless environment
 IN_DOCKER = os.environ.get('DOCKER', 'false').lower() == 'true'
