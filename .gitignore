@@ -1,11 +1,8 @@
-# Chrome profiles (created by the script)
+# Generated profile directories
 chrome_profile*/
-chrome_profile
 
-# Temp images
+# Temp/generated images
 temp/
-
-# Generated output
 discord_gift.png
 
 # Archives

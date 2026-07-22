@@ -1,0 +1,20 @@
+# Git
+.git/
+.gitignore
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Generated at runtime
+temp/
+discord_gift.png
+chrome_profile*/
+
+# Windows files (not needed on Linux)
+*.bat
+*.exe
+*.rar
+*.zip
+README.md

