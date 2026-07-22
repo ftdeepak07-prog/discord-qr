@@ -7,6 +7,7 @@ RUN apt-get update && apt-get install -y \
     unzip \
     curl \
     fonts-liberation \
+    fonts-dejavu-core \
     libu2f-udev \
     libvulkan1 \
     xdg-utils \
